@@ -1,4 +1,14 @@
 # AAE4011_GR
-Group 2: Cheung Chun Pang, Tang Chung Wang, Chau Hiu Lok
 
-Link for the results and database (file size is too large): https://connectpolyu-my.sharepoint.com/:f:/g/personal/24036721d_connect_polyu_hk/IgC9i87MIPBoR61PcXDqZzyDAepYGPi2ZRfV5-4ssFjmFlk?e=cSKuJn
+Meteor Detection and Counting using YOLOv8 for AAE4011 Group Project.
+
+## Team Members
+- Cheung Chun Pang
+- Tang Chung Wang
+- Chau Hiu Lok
+
+## Project Files
+Some result files and the dataset are too large to upload directly to this repository.
+
+- Results and database: [Open SharePoint folder](https://connectpolyu-my.sharepoint.com/:f:/r/personal/24036721d_connect_polyu_hk/Documents/AAE4011/Group?csf=1&web=1&e=gSCWfj)
+- Alternative access link: [Open backup folder](https://connectpolyu-my.sharepoint.com/:f:/personal/24036721d_connect_polyu_hk/lgC9i87MIPBoR61PcXDqZzyDAepYGPi2ZRfV5-4ssFjmFlk?e=cSKuJn)
