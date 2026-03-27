@@ -11,4 +11,3 @@ Meteor Detection and Counting using YOLOv8 for AAE4011 Group Project.
 Some result files and the dataset are too large to upload directly to this repository.
 
 - Results and database: [Open SharePoint folder](https://connectpolyu-my.sharepoint.com/:f:/r/personal/24036721d_connect_polyu_hk/Documents/AAE4011/Group?csf=1&web=1&e=gSCWfj)
-- Alternative access link: [Open backup folder](https://connectpolyu-my.sharepoint.com/:f:/personal/24036721d_connect_polyu_hk/lgC9i87MIPBoR61PcXDqZzyDAepYGPi2ZRfV5-4ssFjmFlk?e=cSKuJn)
