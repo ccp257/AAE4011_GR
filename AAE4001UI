@@ -1,0 +1,601 @@
+# ============================================================
+# 🌠 METEOR DETECTOR UI — CustomTkinter
+# Install: pip install customtkinter ultralytics roboflow
+#          opencv-python matplotlib pillow
+# Run    : python meteor_ui.py
+# ============================================================
+
+import os, glob, threading, queue, sys
+import tkinter as tk
+from tkinter import filedialog, messagebox
+import customtkinter as ctk
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from PIL import Image
+
+# ── Theme ────────────────────────────────────────────────────
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
+CYAN   = "#00e5ff"
+BG     = "#0d0d1a"
+PANEL  = "#12122a"
+ACCENT = "#1a1a3e"
+
+
+# ════════════════════════════════════════════════════════════
+#  LOG WIDGET — thread-safe scrollable console
+# ════════════════════════════════════════════════════════════
+class LogBox(ctk.CTkTextbox):
+    def __init__(self, master, **kw):
+        super().__init__(master, state="disabled",
+                         font=("Consolas", 11),
+                         fg_color=PANEL, text_color="#b0e0ff",
+                         wrap="word", **kw)
+        self._q = queue.Queue()
+        self._poll()
+
+    def write(self, msg):          # acts as sys.stdout
+        self._q.put(msg)
+
+    def flush(self): pass          # needed for sys.stdout redirect
+
+    def log(self, msg):
+        self._q.put(msg + "\n")
+
+    def _poll(self):
+        while not self._q.empty():
+            msg = self._q.get_nowait()
+            self.configure(state="normal")
+            self.insert("end", msg)
+            self.see("end")
+            self.configure(state="disabled")
+        self.after(100, self._poll)
+
+
+# ════════════════════════════════════════════════════════════
+#  SETUP TAB
+# ════════════════════════════════════════════════════════════
+class SetupTab(ctk.CTkFrame):
+    def __init__(self, master, config: dict):
+        super().__init__(master, fg_color="transparent")
+        self.cfg = config
+        self._build()
+
+    def _row(self, label, var, row, browse=None):
+        ctk.CTkLabel(self, text=label, anchor="w",
+                     text_color=CYAN).grid(row=row, column=0,
+                     padx=(20,8), pady=6, sticky="w")
+        entry = ctk.CTkEntry(self, textvariable=var, width=380,
+                             fg_color=ACCENT)
+        entry.grid(row=row, column=1, pady=6, sticky="ew")
+        if browse:
+            ctk.CTkButton(self, text="📂", width=36,
+                          command=browse,
+                          fg_color=ACCENT,
+                          hover_color="#2a2a5e"
+                          ).grid(row=row, column=2, padx=8)
+
+    def _build(self):
+        self.columnconfigure(1, weight=1)
+        ctk.CTkLabel(self, text="⚙️  Configuration",
+                     font=("Segoe UI", 16, "bold"),
+                     text_color=CYAN).grid(
+                     row=0, column=0, columnspan=3,
+                     padx=20, pady=(16,10), sticky="w")
+
+        self._row("Roboflow API Key",
+                  self.cfg["api_key"], 1)
+        self._row("Dataset Dir",
+                  self.cfg["dataset_dir"], 2,
+                  lambda: self.cfg["dataset_dir"].set(
+                      filedialog.askdirectory()))
+        self._row("Runs Dir",
+                  self.cfg["runs_dir"], 3,
+                  lambda: self.cfg["runs_dir"].set(
+                      filedialog.askdirectory()))
+        self._row("Best Weights (.pt)",
+                  self.cfg["weights"], 4,
+                  lambda: self.cfg["weights"].set(
+                      filedialog.askopenfilename(
+                          filetypes=[("PT files","*.pt")])))
+
+        # Divider
+        ctk.CTkLabel(self, text="─" * 60,
+                     text_color="#333355").grid(
+                     row=5, column=0, columnspan=3, pady=8)
+        ctk.CTkLabel(self, text="🎬  Inference Source",
+                     font=("Segoe UI", 14, "bold"),
+                     text_color=CYAN).grid(
+                     row=6, column=0, columnspan=3,
+                     padx=20, sticky="w")
+
+        self._row("Video Path (.mp4)",
+                  self.cfg["video_path"], 7,
+                  lambda: self.cfg["video_path"].set(
+                      filedialog.askopenfilename(
+                          filetypes=[("Videos","*.mp4 *.avi *.mov")])))
+        self._row("Image Dir",
+                  self.cfg["image_dir"], 8,
+                  lambda: self.cfg["image_dir"].set(
+                      filedialog.askdirectory()))
+
+        ctk.CTkLabel(self, text="✅  Changes apply immediately to all tabs.",
+                     text_color="#666699",
+                     font=("Segoe UI", 11)
+                     ).grid(row=9, column=0, columnspan=3,
+                            padx=20, pady=12, sticky="w")
+
+
+# ════════════════════════════════════════════════════════════
+#  TRAINING TAB
+# ════════════════════════════════════════════════════════════
+class TrainTab(ctk.CTkFrame):
+    def __init__(self, master, config: dict, logbox: LogBox):
+        super().__init__(master, fg_color="transparent")
+        self.cfg = config
+        self.log = logbox
+        self._build()
+
+    def _build(self):
+        self.columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(self, text="🚀  Train YOLOv8",
+                     font=("Segoe UI", 16, "bold"),
+                     text_color=CYAN
+                     ).grid(row=0, column=0, columnspan=4,
+                            padx=20, pady=(16,10), sticky="w")
+
+        # ── Hyperparameters ──
+        params = [
+            ("Base Model", "model_base",
+             ["yolov8n.pt","yolov8s.pt","yolov8m.pt","yolov8l.pt"]),
+            ("Epochs",     "epochs",     None),
+            ("Image Size", "img_size",   None),
+            ("Batch Size", "batch_size", None),
+            ("Conf Thresh","conf_thresh",None),
+        ]
+        for i, (lbl, key, opts) in enumerate(params):
+            ctk.CTkLabel(self, text=lbl, anchor="w",
+                         text_color="#aaaacc"
+                         ).grid(row=i+1, column=0,
+                                padx=(20,8), pady=5, sticky="w")
+            if opts:
+                w = ctk.CTkOptionMenu(self, values=opts,
+                                      variable=self.cfg[key],
+                                      fg_color=ACCENT,
+                                      button_color="#2a2a5e",
+                                      width=160)
+            else:
+                w = ctk.CTkEntry(self, textvariable=self.cfg[key],
+                                 width=160, fg_color=ACCENT)
+            w.grid(row=i+1, column=1, pady=5, sticky="w")
+
+        # ── Progress bar ──
+        self.progress = ctk.CTkProgressBar(self, width=420,
+                                           progress_color=CYAN)
+        self.progress.set(0)
+        self.progress.grid(row=7, column=0, columnspan=4,
+                           padx=20, pady=(14,4), sticky="ew")
+        self.status_lbl = ctk.CTkLabel(self, text="Idle",
+                                       text_color="#666699")
+        self.status_lbl.grid(row=8, column=0, columnspan=4,
+                             padx=20, sticky="w")
+
+        # ── Buttons ──
+        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
+        btn_frame.grid(row=9, column=0, columnspan=4,
+                       padx=20, pady=10, sticky="w")
+        ctk.CTkButton(btn_frame, text="📦 Download Dataset",
+                      command=self._download,
+                      fg_color="#1a3a5e",
+                      hover_color="#1a4a7e"
+                      ).pack(side="left", padx=(0,10))
+        self.train_btn = ctk.CTkButton(
+                      btn_frame, text="🏋️ Start Training",
+                      command=self._train,
+                      fg_color="#1a5e3a",
+                      hover_color="#1a7e4a")
+        self.train_btn.pack(side="left")
+
+    def _download(self):
+        def _run():
+            from roboflow import Roboflow
+            self.log.log("📦 Connecting to Roboflow...")
+            try:
+                rf = Roboflow(api_key=self.cfg["api_key"].get())
+                project = rf.workspace("dp-meteory"
+                          ).project("meteors-8m2qc")
+                ds = project.version(2).download(
+                         "yolov8",
+                         location=self.cfg["dataset_dir"].get())
+                self.log.log(f"✅ Dataset saved: {ds.location}")
+            except Exception as e:
+                self.log.log(f"❌ Download failed: {e}")
+        threading.Thread(target=_run, daemon=True).start()
+
+    def _train(self):
+        self.train_btn.configure(state="disabled")
+        self.progress.set(0)
+        self.status_lbl.configure(text="Training…")
+
+        def _run():
+            from ultralytics import YOLO
+            epochs = int(self.cfg["epochs"].get())
+            try:
+                model = YOLO(self.cfg["model_base"].get())
+                data_yaml = os.path.join(
+                    self.cfg["dataset_dir"].get(), "data.yaml")
+                self.log.log("🚀 Training started…")
+                # Redirect stdout to log
+                sys.stdout = self.log
+                model.train(
+                    data=data_yaml,
+                    epochs=epochs,
+                    imgsz=int(self.cfg["img_size"].get()),
+                    batch=int(self.cfg["batch_size"].get()),
+                    name="meteor_detector",
+                    project=self.cfg["runs_dir"].get(),
+                    patience=10, augment=True,
+                    degrees=0, fliplr=0.5, mosaic=1.0,
+                    verbose=True, device=0
+                )
+                sys.stdout = sys.__stdout__
+                self.log.log("\n✅ Training complete!")
+                self.after(0, lambda: self.progress.set(1))
+                self.after(0, lambda: self.status_lbl.configure(
+                    text="✅ Done"))
+            except Exception as e:
+                sys.stdout = sys.__stdout__
+                self.log.log(f"❌ Training error: {e}")
+                self.after(0, lambda: self.status_lbl.configure(
+                    text="❌ Error"))
+            finally:
+                self.after(0, lambda: self.train_btn.configure(
+                    state="normal"))
+
+        threading.Thread(target=_run, daemon=True).start()
+
+
+# ════════════════════════════════════════════════════════════
+#  INFERENCE TAB
+# ════════════════════════════════════════════════════════════
+class InferTab(ctk.CTkFrame):
+    def __init__(self, master, config: dict,
+                 logbox: LogBox, results_tab):
+        super().__init__(master, fg_color="transparent")
+        self.cfg        = config
+        self.log        = logbox
+        self.results    = results_tab
+        self._build()
+
+    def _build(self):
+        ctk.CTkLabel(self, text="🎬  Run Inference",
+                     font=("Segoe UI", 16, "bold"),
+                     text_color=CYAN
+                     ).pack(anchor="w", padx=20, pady=(16,8))
+
+        # ── Mode toggle ──
+        self.mode = ctk.StringVar(value="video")
+        mode_frame = ctk.CTkFrame(self, fg_color=ACCENT,
+                                  corner_radius=10)
+        mode_frame.pack(fill="x", padx=20, pady=6)
+        ctk.CTkRadioButton(mode_frame, text="🎥  Video",
+                           variable=self.mode, value="video",
+                           text_color=CYAN,
+                           ).pack(side="left", padx=20, pady=10)
+        ctk.CTkRadioButton(mode_frame, text="🖼️  Images",
+                           variable=self.mode, value="images",
+                           text_color=CYAN,
+                           ).pack(side="left", padx=20)
+
+        # ── Conf threshold slider ──
+        slider_frame = ctk.CTkFrame(self, fg_color="transparent")
+        slider_frame.pack(fill="x", padx=20, pady=8)
+        ctk.CTkLabel(slider_frame, text="Confidence:",
+                     text_color="#aaaacc").pack(side="left")
+        self.conf_lbl = ctk.CTkLabel(slider_frame, text="0.40",
+                                     text_color=CYAN, width=40)
+        self.conf_lbl.pack(side="right", padx=(0,20))
+        sl = ctk.CTkSlider(slider_frame, from_=0.1, to=0.9,
+                           number_of_steps=16,
+                           variable=self.cfg["conf_thresh"],
+                           command=lambda v: self.conf_lbl.configure(
+                               text=f"{float(v):.2f}"),
+                           button_color=CYAN,
+                           progress_color=CYAN)
+        sl.pack(side="left", fill="x", expand=True, padx=10)
+
+        # ── Run button ──
+        self.run_btn = ctk.CTkButton(
+            self, text="▶  Run Detection",
+            font=("Segoe UI", 13, "bold"),
+            height=40,
+            fg_color="#1a5e3a",
+            hover_color="#1a7e4a",
+            command=self._run)
+        self.run_btn.pack(padx=20, pady=14, fill="x")
+
+        # ── Live stats ──
+        stats = ctk.CTkFrame(self, fg_color=ACCENT,
+                             corner_radius=10)
+        stats.pack(fill="x", padx=20, pady=4)
+        self.total_lbl = ctk.CTkLabel(stats,
+            text="🌠 Unique Meteors: —",
+            font=("Segoe UI", 14, "bold"), text_color=CYAN)
+        self.total_lbl.pack(side="left", padx=20, pady=10)
+        self.max_lbl = ctk.CTkLabel(stats,
+            text="📊 Max / Frame: —",
+            font=("Segoe UI", 14), text_color="#aaaacc")
+        self.max_lbl.pack(side="left", padx=20)
+
+    def _run(self):
+        self.run_btn.configure(state="disabled")
+        mode = self.mode.get()
+
+        def _go():
+            from ultralytics import YOLO
+            weights = self.cfg["weights"].get()
+            conf    = float(self.cfg["conf_thresh"].get())
+            runs    = self.cfg["runs_dir"].get()
+
+            if not os.path.exists(weights):
+                self.log.log(f"❌ Weights not found: {weights}")
+                self.after(0, lambda: self.run_btn.configure(
+                    state="normal"))
+                return
+
+            model = YOLO(weights)
+            self.log.log(f"🔍 Running inference ({mode})…")
+
+            if mode == "video":
+                src = self.cfg["video_path"].get()
+                if not os.path.exists(src):
+                    self.log.log(f"❌ Video not found: {src}")
+                    return
+                results = model.track(
+                    source=src,
+                    tracker="bytetrack.yaml",
+                    conf=conf, iou=0.5,
+                    save=True,
+                    project=runs,
+                    name="meteor_count_video",
+                    stream=True)
+
+                unique_ids, frame_counts = set(), []
+                for r in results:
+                    if r.boxes.id is not None:
+                        ids = r.boxes.id.int().tolist()
+                        unique_ids.update(ids)
+                        frame_counts.append(len(ids))
+                    else:
+                        frame_counts.append(0)
+
+                total = len(unique_ids)
+                peak  = max(frame_counts) if frame_counts else 0
+                self.log.log(
+                    f"\n🌠 Unique meteors : {total}"
+                    f"\n📊 Peak per frame : {peak}")
+                self.after(0, lambda: self.total_lbl.configure(
+                    text=f"🌠 Unique Meteors: {total}"))
+                self.after(0, lambda: self.max_lbl.configure(
+                    text=f"📊 Max / Frame: {peak}"))
+                self.after(0,
+                    lambda: self.results.update_plot(frame_counts))
+
+            else:  # images
+                src  = self.cfg["image_dir"].get()
+                imgs = glob.glob(os.path.join(src, "*.jpg")) + \
+                       glob.glob(os.path.join(src, "*.png"))
+                if not imgs:
+                    self.log.log(f"❌ No images in: {src}")
+                    return
+                total = 0
+                for p in imgs:
+                    r = model.predict(source=p, conf=conf,
+                                      save=True, project=runs,
+                                      name="meteor_count_images")
+                    n = len(r[0].boxes)
+                    total += n
+                    self.log.log(
+                        f"  {os.path.basename(p)}: {n} meteor(s)")
+                self.log.log(f"\n🌠 Total: {total} meteor(s)")
+                self.after(0, lambda: self.total_lbl.configure(
+                    text=f"🌠 Total Meteors: {total}"))
+
+            self.after(0, lambda: self.run_btn.configure(
+                state="normal"))
+
+        threading.Thread(target=_go, daemon=True).start()
+
+
+# ════════════════════════════════════════════════════════════
+#  RESULTS TAB — Embedded Matplotlib chart
+# ════════════════════════════════════════════════════════════
+class ResultsTab(ctk.CTkFrame):
+    def __init__(self, master):
+        super().__init__(master, fg_color="transparent")
+        self._build()
+
+    def _build(self):
+        ctk.CTkLabel(self, text="📊  Detection Results",
+                     font=("Segoe UI", 16, "bold"),
+                     text_color=CYAN
+                     ).pack(anchor="w", padx=20, pady=(16,8))
+
+        self.fig, self.ax = plt.subplots(figsize=(9, 3.8),
+                                         facecolor=BG)
+        self.ax.set_facecolor(BG)
+        self.ax.set_title("Run inference to see results",
+                          color="#555577", fontsize=12)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
+        self.canvas.get_tk_widget().pack(
+            fill="both", expand=True, padx=20, pady=6)
+
+        self.save_btn = ctk.CTkButton(
+            self, text="💾 Save Plot",
+            command=self._save,
+            fg_color=ACCENT,
+            hover_color="#2a2a5e")
+        self.save_btn.pack(padx=20, pady=8, anchor="e")
+
+    def update_plot(self, frame_counts: list):
+        self.ax.clear()
+        self.ax.set_facecolor(BG)
+        x = range(len(frame_counts))
+        self.ax.plot(frame_counts, color=CYAN, linewidth=1.2)
+        self.ax.fill_between(x, frame_counts,
+                             alpha=0.25, color=CYAN)
+        self.ax.set_title("🌠 Meteors Detected Per Frame",
+                          color=CYAN, fontsize=13)
+        self.ax.set_xlabel("Frame", color="#888899")
+        self.ax.set_ylabel("Count",  color="#888899")
+        self.ax.tick_params(colors="#888899")
+        for spine in self.ax.spines.values():
+            spine.set_edgecolor("#333355")
+        self.fig.tight_layout()
+        self.canvas.draw()
+
+    def _save(self):
+        path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG","*.png")])
+        if path:
+            self.fig.savefig(path, dpi=150,
+                             facecolor=BG)
+            messagebox.showinfo("Saved", f"Plot saved:\n{path}")
+
+
+# ════════════════════════════════════════════════════════════
+#  MAIN APP WINDOW
+# ════════════════════════════════════════════════════════════
+class MeteorApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("🌠 Meteor Detector")
+        self.geometry("1080x720")
+        self.configure(fg_color=BG)
+        self._init_config()
+        self._build_layout()
+
+    def _init_config(self):
+        """Shared tk.StringVar config — passed to all tabs."""
+        self.cfg = {
+            "api_key":     tk.StringVar(value="5cH07UbHyNu3Wa3bLsbd"),
+            "dataset_dir": tk.StringVar(
+                value=r"C:\Python\AAE4011\dataset"),
+            "runs_dir":    tk.StringVar(
+                value=r"C:\Python\AAE4011\runs"),
+            "weights":     tk.StringVar(
+                value=r"C:\Python\AAE4011\runs\meteor_detector"
+                      r"\weights\best.pt"),
+            "video_path":  tk.StringVar(
+                value=r"C:\Python\AAE4011\video\V3.mp4"),
+            "image_dir":   tk.StringVar(value=""),
+            "model_base":  tk.StringVar(value="yolov8m.pt"),
+            "epochs":      tk.StringVar(value="50"),
+            "img_size":    tk.StringVar(value="640"),
+            "batch_size":  tk.StringVar(value="8"),
+            "conf_thresh": tk.DoubleVar(value=0.40),
+        }
+
+    def _build_layout(self):
+        # ── Left sidebar ──────────────────────────────────
+        sidebar = ctk.CTkFrame(self, width=200,
+                               fg_color=PANEL,
+                               corner_radius=0)
+        sidebar.pack(side="left", fill="y")
+        sidebar.pack_propagate(False)
+
+        ctk.CTkLabel(sidebar,
+                     text="🌠\nMETEOR\nDETECTOR",
+                     font=("Segoe UI", 15, "bold"),
+                     text_color=CYAN,
+                     justify="center"
+                     ).pack(pady=(28, 20))
+
+        # Sidebar nav buttons
+        nav_items = [
+            ("⚙️  Setup",    0),
+            ("🏋️  Training", 1),
+            ("🎬  Inference",2),
+            ("📊  Results",  3),
+        ]
+        self._nav_btns = []
+        for label, idx in nav_items:
+            b = ctk.CTkButton(
+                sidebar, text=label, anchor="w",
+                width=170, height=38,
+                font=("Segoe UI", 12),
+                fg_color="transparent",
+                hover_color=ACCENT,
+                text_color="#ccccee",
+                command=lambda i=idx: self._switch(i))
+            b.pack(pady=3, padx=14)
+            self._nav_btns.append(b)
+
+        # Version label at bottom
+        ctk.CTkLabel(sidebar, text="YOLOv8  •  AAE4011",
+                     text_color="#333355",
+                     font=("Segoe UI", 9)
+                     ).pack(side="bottom", pady=14)
+
+        # ── Right area: tabs + log ────────────────────────
+        right = ctk.CTkFrame(self, fg_color=BG,
+                             corner_radius=0)
+        right.pack(side="left", fill="both", expand=True)
+        right.rowconfigure(0, weight=3)
+        right.rowconfigure(1, weight=1)
+        right.columnconfigure(0, weight=1)
+
+        # Tab container
+        self._tab_frames = []
+        tab_host = ctk.CTkFrame(right, fg_color=BG)
+        tab_host.grid(row=0, column=0,
+                      sticky="nsew", padx=10, pady=(10,4))
+        tab_host.columnconfigure(0, weight=1)
+        tab_host.rowconfigure(0, weight=1)
+
+        # Shared log
+        log_frame = ctk.CTkFrame(right, fg_color=PANEL,
+                                  corner_radius=10)
+        log_frame.grid(row=1, column=0,
+                       sticky="nsew", padx=10, pady=(0,10))
+        ctk.CTkLabel(log_frame, text="🖥  Console",
+                     text_color=CYAN,
+                     font=("Segoe UI", 11, "bold")
+                     ).pack(anchor="w", padx=12, pady=(6,0))
+        self.logbox = LogBox(log_frame, height=130)
+        self.logbox.pack(fill="both", expand=True,
+                         padx=10, pady=(2,8))
+        self.logbox.log("✅ Meteor Detector UI ready.")
+
+        # Instantiate tabs
+        results_tab = ResultsTab(tab_host)
+        tabs = [
+            SetupTab(tab_host, self.cfg),
+            TrainTab(tab_host, self.cfg, self.logbox),
+            InferTab(tab_host, self.cfg,
+                     self.logbox, results_tab),
+            results_tab,
+        ]
+        for t in tabs:
+            t.grid(row=0, column=0, sticky="nsew")
+            self._tab_frames.append(t)
+
+        self._switch(0)   # show Setup tab first
+
+    def _switch(self, idx: int):
+        for i, (btn, tab) in enumerate(
+                zip(self._nav_btns, self._tab_frames)):
+            if i == idx:
+                tab.tkraise()
+                btn.configure(fg_color=ACCENT,
+                               text_color=CYAN)
+            else:
+                btn.configure(fg_color="transparent",
+                               text_color="#ccccee")
+
+
+if __name__ == "__main__":
+    app = MeteorApp()
+    app.mainloop()
