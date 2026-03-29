@@ -241,11 +241,12 @@ Possible future improvements include:
 
 ## Conclusion
 
-This project developed an end-to-end automated meteor detection and counting system using YOLOv8. The system includes dataset download, model training, inference, tracking, result plotting, and a GUI for easier operation.
+In this project, we have developed an end-to-end automated meteor detection and counting system using YOLOv8. The system covers the full process from dataset download, to model training, to inference, tracking, and result visualization, and we also developed a GUI so that the project is not limited to command-line use only. The dataset used for training contains 747 images in YOLOv8 format, and this formed the basis of the whole detection workflow.
 
-Testing showed that the system could process both short meteor clips and longer livestream footage in a generally reasonable way. The output was sparse rather than continuous, which is consistent with the real nature of meteor events.
+From our testing, the system was able to process both short meteor compilation clips and longer livestream-style footage in a generally reasonable manner. The detection outputs were sparse rather than continuous, which is in fact what we would expect for meteor observation, since meteors are brief and relatively rare events. In that sense, the project showed that AI-based automated meteor monitoring is feasible, even though there is still room for improvement before it could be considered ready for broader real-world use.
 
-A key lesson from the project is that meteor detection differs from more common object detection tasks because the targets are faint, short-lived, and rare. We also observed that hardware differences may affect not only processing speed but also the final behaviour of the detection and tracking pipeline. Overall, the project demonstrates that AI-based automated meteor monitoring is feasible, while also showing several areas where further improvement is still needed.
+Another important part of this project is what we learnt from the implementation process itself. We found that meteor detection is not quite the same as more common object detection tasks, because the targets are faint, short-lived, and infrequent. We also realised that hardware differences may affect not only the speed, but sometimes the final behaviour of the pipeline as well, especially when tracking is involved, and this was one of the more practical lessons we gained from doing the project.
+
 
 ## Project Files
 Some result files and the dataset are too large to upload directly to this repository.
