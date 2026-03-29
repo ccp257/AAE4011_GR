@@ -253,5 +253,4 @@ Another important part of this project is what we learnt from the implementation
 Some result files and the dataset are too large to upload directly to this repository.
 
 - Results and database: [Open SharePoint folder](https://connectpolyu-my.sharepoint.com/:f:/r/personal/24036721d_connect_polyu_hk/Documents/AAE4011/Group?csf=1&web=1&e=gSCWfj)
-- - Full report (Word): [AAE4011 Group Project Assignment Report.docx](https://github.com/user-attachments/files/26327865/AAE4011.Group.Project.Assignment.Report.docx)
-t_Report.docx)
+- Full report (Word): [AAE4011 Group Project Assignment Report.docx](https://github.com/user-attachments/files/26327865/AAE4011.Group.Project.Assignment.Report.docx)
