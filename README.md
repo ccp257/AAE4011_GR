@@ -97,9 +97,7 @@ From the sample labels we examined, most meteor bounding boxes are relatively sm
 
 ### Preprocessing
 
-According to the Roboflow dataset description, the only preprocessing applied at export time was **auto-orientation** based on EXIF metadata. No augmentation was applied during export.
-
-During training, augmentation was added in our own script. However, rotation augmentation was intentionally disabled because meteors are directional streaks, and excessive rotation could create unrealistic training examples.
+According to the Roboflow README, the only preprocessing applied was Auto-orientation, which corrects image rotation based on EXIF metadata. Augmentation was not applied at export time, which means Roboflow didn't artificially expand the dataset with rotations, crops, or colour adjustments. Although our training script adds augmentation later, but we intentionally avoided rotation augmentation since meteors are directional tasks, and we would not want to create unrealistic training examples by rotating them.  
 
 ---
 
