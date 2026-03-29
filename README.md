@@ -3,9 +3,10 @@
 Meteor Detection and Counting using YOLOv8 for AAE4011 Group Project.
 
 ## Team Members (Group 2)
-- Cheung Chun Pang
-- Tang Chung Wang
-- Chau Hiu Lok
+- Cheung Chun Pang 24036721D
+- Chau Hiu Lok 24018496D
+- Tang Chung Wang 24020073D
+
 
 ## Introduction
 
