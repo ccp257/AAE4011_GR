@@ -172,7 +172,7 @@ Tracking is performed using ByteTrack so that a meteor appearing across several 
 
 ### GUI
 
-A graphical user interface was developed using **CustomTkinter** to make the system easier to use without relying entirely on terminal commands.
+Aside from the script-based workflow, we also developed a graphical user interface using CustomTkinter. The purpose of this GUI is to make the whole system easier to use, especially for users who may not be familiar with running Python code directly from scripts or terminal commands. The project files show that the GUI integrates configuration, training, inference, result plotting, and a shared log window into a single application.
 
 The GUI includes four main tabs:
 - Setup
