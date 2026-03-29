@@ -105,13 +105,19 @@ According to the Roboflow README, the only preprocessing applied was Auto-orient
 
 ### YOLOv8 Variants
 
-Two YOLOv8 model sizes were trained so that speed and accuracy could be compared:
+For this project, we trained two different YOLOv8 model sizes so that we could compare the trade-off between speed and accuracy:
 - **YOLOv8s**
 - **YOLOv8m**
 
-YOLOv8s is lighter and faster, making it more suitable for more limited hardware. YOLOv8m is larger and may provide better detection performance, but it also requires more computation.
+In particular, we used YOLOv8s and YOLOv8m, which are both supported in our training setup, and our codebase also shows that the project was built around Ultralytics YOLOv8 rather than the originally proposed YOLOv5 approach.
+YOLOv8s, which is the smaller variant, is lighter, faster, and generally more suitable when GPU resources are more limited. YOLOv8m, on the other hand, has more parameters and therefore may give better detection performance, although it also requires more computation during both training and inference.
 
-Both models started from pretrained Ultralytics weights and were then fine-tuned on the meteor dataset. This transfer learning approach is practical for a project with a moderate dataset size, since it allows the model to reuse already learned visual features before adapting to meteor-specific patterns.
+Both models start from pretrained weights provided by Ultralytics, and from there we fine-tuned them on our meteor dataset. In that sense, we were not training the models entirely from scratch, but rather adapting an already capable object detector so that it could better recognize the visual characteristics of meteor streaks in night-sky footage.
+
+This approach is, in our view, more practical for a project like this, because the dataset itself is not extremely large, and transfer learning allows us to make use of previously learned visual features before focusing on the meteor-specific task.
+
+
+
 
 ### Training Configuration
 
