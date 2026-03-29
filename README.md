@@ -93,7 +93,7 @@ Meaning:
 - Width = 4.8% of image width
 - Height = 8.2% of image height
 
-Most meteor bounding boxes are relatively small, which matches the nature of meteors as small and short-lived targets. Some frames also contain empty label files, which is expected because meteors are naturally sparse events.
+From the sample labels we examined, most meteor bounding boxes are relatively small, usually only a small percentage of the full image dimensions, which is consistent with the nature of meteors as small and brief targets in the sky. Some test images also contain empty label files, which means there are no meteors in those frames, and this is expected because meteor events are naturally sparse.
 
 ### Preprocessing
 
