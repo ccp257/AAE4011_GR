@@ -60,7 +60,9 @@ The `data.yaml` file defines the paths and confirms that the project has only on
 
 ### Image Characteristics
 
-The images come from real observatory footage captured using an all-sky fisheye camera. This makes the dataset realistic, but also more difficult than a clean laboratory-style dataset.
+The images come from real observatory footage and were captured using an all-sky camera with a fisheye view, therefore the data is more realistic but also more difficult to work with.
+By looking through the sample images, we found that this dataset contains several real-world challenges rather than clean laboratory-style images. 
+
 
 Main challenges include:
 - Fisheye distortion
@@ -69,7 +71,7 @@ Main challenges include:
 - Small targets
 - Sparse meteor events
 
-Because the images come from real night-time observation sessions, they are more suitable for practical meteor detection testing, even though they make the task more challenging.
+The images are also timestamped, which shows that they were captured from actual night-time observation sessions rather than artificially generated examples, and because of that, we believe this dataset is more suitable for evaluating practical meteor detection performance, although it also makes the training task more challenging.
 
 ### Annotation Format
 
