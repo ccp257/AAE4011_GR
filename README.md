@@ -66,11 +66,11 @@ By looking through the sample images, we found that this dataset contains severa
 
 
 Main challenges include:
-- Fisheye distortion
-- Low-light conditions
-- Moon interference
-- Small targets
-- Sparse meteor events
+- Fisheye distortion: The wide 180° field of view stretches objects near the edges of the image.
+- Low-light conditions:  The night sky is dark, and meteors often appear only as faint streaks.
+- Moon interference: Bright moonlight can create lens flare and wash out faint objects, which is visible in many training images.
+- Small targets: Meteors usually appear as thin diagonal lines and occupy only a very small portion of the image.
+- Sparse meteor events: Some images contain no meteors at all, which reflects the natural rarity of meteor events.
 
 The images are also timestamped, which shows that they were captured from actual night-time observation sessions rather than artificially generated examples, and because of that, we believe this dataset is more suitable for evaluating practical meteor detection performance, although it also makes the training task more challenging.
 
