@@ -144,9 +144,14 @@ ByteTrack is integrated into the inference pipeline so that meteors detected in 
 
 ### Hardware
 
-Training was performed on different GPUs, including the **RTX 5070** and **RTX 3060**. As expected, the training speed differed noticeably between systems.
+Our team trained the models on two different systems, which meant that the same overall training pipeline was being executed under different hardware conditions. Because of that, there was a noticeable difference in training speed, which is not surprising given that newer GPUs generally offer stronger performance and better efficiency.
 
-A more surprising result was that the final counting output was not always exactly the same across weights trained on different machines. This suggests that small numerical differences in training and tracking may propagate through the detection pipeline, especially when the final count depends on ByteTrack ID assignment across frames.
+What was more unexpected for us is that the final meteor counts were not always exactly the same when using weights trained on different machines, even when the same test footage was used afterward. At first, this seemed as though there might be an issue in the implementation, but after looking into it further, we came to understand that small numerical differences between hardware platforms may propagate through the detection and tracking process.
+
+This matters especially in our case because the counting logic is not based only on raw detections, but also on ByteTrack assigning IDs over time. When a system like this is slightly sensitive to confidence values, bounding box outputs, or tracking association between frames, even a small difference may eventually lead to a different unique count total, despite the visual detections still looking reasonable overall. So, one of the more important things we learnt here is that hardware reproducibility is not always as straightforward as we first assumed, especially when the pipeline includes sequential components such as tracking rather than a single static prediction step.
+
+For an actual deployed system, such as one intended for long-term observatory use, it would probably be more appropriate to standardize the entire environment rather than retraining casually across multiple machines. In other words, the exact model weights, software versions, and runtime setup should all be controlled properly, whereas for this project we treated the difference mainly as an observed phenomenon worth documenting, rather than as a failure of the system itself.
+
 
 ---
 
