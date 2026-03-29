@@ -25,6 +25,11 @@ The final system consists of four main parts:
 
 We trained and tested multiple YOLOv8 variants, including YOLOv8s and YOLOv8m, on both short meteor compilation clips and longer livestream-style footage.
 
+During the development process, we found that meteor detection is in fact more difficult than we initially expected, especially when compared with more typical object detection tasks. Meteors are faint, brief, and relatively rare, while real observatory footage may also contain moonlight, atmospheric noise, and lens flare, all of which make the detection process less straightforward. Another thing we found unexpectedly is that training on different GPUs, namely the RTX 5070 and RTX 3060, did not only affect the speed, but also the final counting results, which showed us that hardware influence may be more significant than we had first assumed.
+
+This report covers what we have built, how we built it, what worked, what did not work as well as expected, and what we learnt throughout the project. In the following chapters, we will present the dataset, the training process, the system design, the testing results, and the main takeaways from the project as a whole.
+
+
 ---
 
 ## Dataset and Preparation
