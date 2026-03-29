@@ -133,14 +133,14 @@ For augmentation:
 - Mosaic augmentation enabled
 - Rotation augmentation disabled
 
-This was a deliberate choice because meteor streaks have natural direction and orientation, so arbitrary rotation could reduce realism.
+The project code explicitly sets degrees=0, fliplr=0.5, and mosaic=1.0, showing that we intentionally kept horizontal flipping and mosaic while avoiding artificial rotation. This was an important decision for us, because meteor detection is not quite the same as ordinary object detection, where random rotation is often acceptable. Meteors are motion streaks with a natural orientation and trajectory, therefore rotating them too much may create image patterns that are unrealistic and not representative of actual observation footage.
 
 For inference:
 - Confidence threshold is adjustable through the GUI
 - Default confidence is around `0.30` to `0.40`
 - IoU threshold is set to `0.5`
 
-ByteTrack is integrated into the inference pipeline so that meteors detected in consecutive frames are assigned unique IDs, helping avoid double-counting.
+ByteTrack is integrated into the inference pipeline so that meteors detected in consecutive frames are assigned unique IDs, helping avoid double-counting, which is important because otherwise the same meteor may be detected multiple times and counted repeatedly. The code for both the script version and the GUI version uses `model.track(..., tracker="bytetrack.yaml", conf=..., iou=0.5)`, which confirms that the counting system is based on tracking rather than frame-by-frame detection alone.
 
 ### Hardware
 
