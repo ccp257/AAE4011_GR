@@ -180,9 +180,18 @@ The GUI includes four main tabs:
 - Inference
 - Results
 
-The Setup tab handles API keys, dataset paths, and model weight selection. The Training tab controls dataset download and YOLOv8 training. The Inference tab allows users to choose video or image input, adjust the confidence threshold, and run meteor detection. The Results tab shows the generated detection plot and allows it to be saved.
+The Setup tab lets users configure basic paths and settings, including the Roboflow API key, dataset directory path, and model weight file selection. This tab also displays the current configuration so users can verify their settings before starting training or inference.
 
-The GUI was useful not only for presentation, but also during development, since it made repeated testing and threshold adjustment much more convenient.
+The Training tab handles both dataset download and YOLOv8 training. In this tab, the user may choose the model variant, set the epochs, image size, batch size, and confidence threshold, then start the training process directly from the interface. The training information is shown through the shared log output, which helps us monitor whether the training is progressing normally.
+
+The Inference tab is used for running meteor detection on either videos or image folders. In our implementation, the user may choose between video mode and image mode, select the relevant source, adjust the confidence threshold using a slider, and then run detection using the selected trained weights. The interface also displays simple statistics such as the total unique meteors and the maximum detections in a frame, which is useful for a quick review of the output.
+
+The Results tab is used for visualization. It shows the “meteors detected per frame” plot and also allows the plot to be saved as a PNG image, which is helpful when preparing figures for reports or presentations. This part of the system is not overly complicated, but it makes the results easier to interpret than only reading raw console outputs.
+
+One practical advantage of the GUI is that it made testing easier during development. For example, we could adjust the confidence threshold quickly and observe how the detection results changed, instead of repeatedly modifying the source code for every small experiment. In that sense, the GUI was not just for appearance, but also genuinely useful for helping us evaluate the trade-off between missing faint meteors and producing false positives.
+
+Overall, the combination of the detection pipeline and the user interface makes the system more usable as a complete project. Rather than producing only a trained model, we ended up with something that can download data, train models, run detection, count meteors, and visualize the results in a more organized and practical way.
+
 
 ---
 
